@@ -9,9 +9,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: const FirebaseOptions(
       apiKey: "AIzaSyAabNJEJkWsQE5mVcYqc4ANo9vBmcH-VIc",
-      authDomain: "mock-bank-37875.appspot.com",
+      authDomain: "mock-bank-37875.firebaseapp.com",
       projectId: "mock-bank-37875",
-      storageBucket: "mock-bank-37875.firebasestorage.app",
+      storageBucket: "mock-bank-37875.appspot.app",
       messagingSenderId: "411423265063",
       appId: "1:411423265063:web:c05cb769da193ac081d902",
     ),
