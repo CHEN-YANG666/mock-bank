@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'pages/shell_page.dart';
-import 'bank_state.dart'; // ⬅️ 一定要引入
 
 Future<void> main() async {
-  // ✅ Flutter 初始化（Web / Mobile 都需要）
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ 关键：先加载本地数据（Web 不 await 会直接 TypeError）
-  await bank.load();
+  // 🔥 Firebase 初始化（Web）
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: "AIzaSyAabNJEJkWsQE5mVcYqc4ANo9vBmcH-VIc",
+      authDomain: "mock-bank-37875.firebaseapp.com",
+      projectId: "mock-bank-37875",
+      storageBucket: "mock-bank-37875.appspot.com",
+      messagingSenderId: "411423265063",
+      appId: "1:411423265063:web:c05cb769da193ac081d902",
+    ),
+  );
 
   runApp(const MyBankApp());
 }
@@ -19,8 +27,6 @@ class MyBankApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
-      // ✅ 保持你原来的银行风格
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         splashColor: Colors.transparent,
@@ -28,7 +34,6 @@ class MyBankApp extends StatelessWidget {
         hoverColor: Colors.transparent,
         useMaterial3: false,
       ),
-
       home: const ShellPage(),
     );
   }

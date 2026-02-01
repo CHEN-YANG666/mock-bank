@@ -11,6 +11,20 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
+  /// ===============================
+  /// 🔥 页面启动时：从 Firestore 云端加载
+  /// ===============================
+  @override
+  void initState() {
+    super.initState();
+    bank.load().then((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final fixedTotal = bank.deposits.fold<int>(
@@ -30,7 +44,9 @@ class _HomePageState extends State<HomePage> {
       ),
       body: ListView(
         children: [
-          /// ===== 总资产 =====
+          /// ===============================
+          /// 总资产
+          /// ===============================
           Container(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -57,36 +73,40 @@ class _HomePageState extends State<HomePage> {
 
           const Divider(height: 1),
 
-          /// ===== 普通预金（改为切 Tab）=====
+          /// ===============================
+          /// 普通預金（切换 Tab）
+          /// ===============================
           ListTile(
             title: const Text("普通預金"),
             subtitle: Text("${_yen(bank.balance)} 円"),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              widget.onJump?.call(1); // 👈 跳到账户一览（普通）
+              widget.onJump?.call(1); // 普通预金 Tab
             },
           ),
 
           const Divider(height: 1),
 
-          /// ===== 定期预金（改为切 Tab）=====
+          /// ===============================
+          /// 定期預金（切换 Tab）
+          /// ===============================
           ListTile(
             title: const Text("定期預金"),
             subtitle: Text("${_yen(fixedTotal)} 円"),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              widget.onJump?.call(2); // 👈 跳到定期 Tab
+              widget.onJump?.call(2); // 定期预金 Tab
             },
           ),
 
           const Divider(height: 12),
 
-          /// =====================================================
-          /// 方案 A：快捷操作
-          /// =====================================================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: const Text(
+          /// ===============================
+          /// 快捷操作
+          /// ===============================
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
               "よく使う操作",
               style: TextStyle(
                 fontSize: 14,
@@ -102,7 +122,7 @@ class _HomePageState extends State<HomePage> {
                 _quickButton(
                   icon: Icons.currency_yen,
                   label: "汇款 / 转账",
-                  onTap: () => widget.onJump?.call(3), // 👈 汇款 Tab
+                  onTap: () => widget.onJump?.call(3),
                 ),
               ],
             ),
@@ -110,9 +130,9 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(height: 16),
 
-          /// =====================================================
-          /// 方案 B：通知 / 提示
-          /// =====================================================
+          /// ===============================
+          /// 通知 / 提示卡片
+          /// ===============================
           Padding(
             padding: const EdgeInsets.all(16),
             child: Container(
@@ -146,10 +166,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// =====================================================
+  /// ===============================
   /// 快捷按钮
-  /// =====================================================
-  Widget _quickButton({
+  /// ===============================
+  static Widget _quickButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -179,7 +199,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// ===== 日元格式化 =====
+  /// ===============================
+  /// 日元格式化
+  /// ===============================
   String _yen(int v) {
     final s = v.toString();
     final buf = StringBuffer();

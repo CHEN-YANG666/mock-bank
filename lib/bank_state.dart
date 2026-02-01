@@ -1,16 +1,22 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// 全局唯一 BankState（云同步）
 final bank = BankState();
 
+/// ===============================
+/// 取引类型
+/// ===============================
 enum TransactionType {
-  deposit,
-  withdraw,
+  deposit,      // 入金
+  withdraw,     // 出金
   transfer,
-  fixedOpen,
-  fixedClose,
+  fixedOpen,    // 定期預入
+  fixedClose,   // 定期解約
 }
 
+/// ===============================
+/// 取引记录
+/// ===============================
 class BankTransaction {
   final TransactionType type;
   final int amount;
@@ -25,26 +31,31 @@ class BankTransaction {
   });
 
   Map<String, dynamic> toJson() => {
-        'type': type.index,
+        'type': type.name,
         'amount': amount,
         'description': description,
-        'date': date.toIso8601String(),
+        'date': Timestamp.fromDate(date),
       };
 
   factory BankTransaction.fromJson(Map<String, dynamic> json) {
     return BankTransaction(
-      type: TransactionType.values[json['type']],
+      type: TransactionType.values.firstWhere(
+        (e) => e.name == json['type'],
+      ),
       amount: json['amount'],
       description: json['description'],
-      date: DateTime.parse(json['date']),
+      date: (json['date'] as Timestamp).toDate(),
     );
   }
 }
 
+/// ===============================
+/// 定期預金
+/// ===============================
 class FixedDeposit {
   final String id;
   final int amount;
-  final double rate;
+  final double rate; // 年利
   final DateTime startDate;
   final int years;
 
@@ -59,16 +70,23 @@ class FixedDeposit {
   DateTime get maturityDate =>
       DateTime(startDate.year + years, startDate.month, startDate.day);
 
-  int get daysLeft => maturityDate.difference(DateTime.now()).inDays;
-  bool get isMatured => DateTime.now().isAfter(maturityDate);
-  int get interest => (amount * rate * years).round();
-  int get totalReturn => amount + interest;
+  int get daysLeft =>
+      maturityDate.difference(DateTime.now()).inDays;
+
+  bool get isMatured =>
+      DateTime.now().isAfter(maturityDate);
+
+  int get interest =>
+      (amount * rate * years).round();
+
+  int get totalReturn =>
+      amount + interest;
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'amount': amount,
         'rate': rate,
-        'startDate': startDate.toIso8601String(),
+        'startDate': Timestamp.fromDate(startDate),
         'years': years,
       };
 
@@ -76,18 +94,29 @@ class FixedDeposit {
     return FixedDeposit(
       id: json['id'],
       amount: json['amount'],
-      rate: json['rate'],
-      startDate: DateTime.parse(json['startDate']),
+      rate: (json['rate'] as num).toDouble(),
+      startDate: (json['startDate'] as Timestamp).toDate(),
       years: json['years'],
     );
   }
 }
 
+/// ===============================
+/// 银行状态（🔥 Firestore 云同步）
+/// ===============================
 class BankState {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// 👉 简化方案：单用户
+  final String _docId = 'default_user';
+
   int balance = 9_753_124;
   final List<FixedDeposit> deposits = [];
   final List<BankTransaction> transactions = [];
 
+  /// ===============================
+  /// 取引追加（本地）
+  /// ===============================
   void addTransaction({
     required TransactionType type,
     required int amount,
@@ -104,41 +133,48 @@ class BankState {
     );
   }
 
+  /// ===============================
+  /// 保存到 Firestore
+  /// ===============================
   Future<void> save() async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.setInt('balance', balance);
-    await sp.setString(
-      'deposits',
-      jsonEncode(deposits.map((e) => e.toJson()).toList()),
-    );
-    await sp.setString(
-      'transactions',
-      jsonEncode(transactions.map((e) => e.toJson()).toList()),
-    );
+    await _db.collection('banks').doc(_docId).set({
+      'balance': balance,
+      'deposits': deposits.map((e) => e.toJson()).toList(),
+      'transactions': transactions.map((e) => e.toJson()).toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
+  /// ===============================
+  /// 从 Firestore 读取
+  /// ===============================
   Future<void> load() async {
-    final sp = await SharedPreferences.getInstance();
-    balance = sp.getInt('balance') ?? balance;
+    final doc = await _db
+        .collection('banks')
+        .doc(_docId)
+        .get();
 
-    final d = sp.getString('deposits');
-    if (d != null) {
-      deposits
-        ..clear()
-        ..addAll(
-          (jsonDecode(d) as List)
-              .map((e) => FixedDeposit.fromJson(e)),
-        );
+    if (!doc.exists) {
+      /// 第一次启动：写入默认数据
+      await save();
+      return;
     }
 
-    final t = sp.getString('transactions');
-    if (t != null) {
-      transactions
-        ..clear()
-        ..addAll(
-          (jsonDecode(t) as List)
-              .map((e) => BankTransaction.fromJson(e)),
-        );
-    }
+    final data = doc.data()!;
+    balance = data['balance'] ?? balance;
+
+    deposits
+      ..clear()
+      ..addAll(
+        (data['deposits'] as List)
+            .map((e) => FixedDeposit.fromJson(e)),
+      );
+
+    transactions
+      ..clear()
+      ..addAll(
+        (data['transactions'] as List)
+            .map((e) => BankTransaction.fromJson(e)),
+      );
   }
 }
