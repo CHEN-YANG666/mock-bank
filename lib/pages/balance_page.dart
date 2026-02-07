@@ -316,7 +316,18 @@ class _BalancePageState extends State<BalancePage> {
     );
   }
 
-  double _rateByYears(int y) => 0.00002;
+  double _rateByYears(int y) {
+  switch (y) {
+    case 1:
+      return 0.004;   // 0.400%
+    case 2:
+      return 0.005;   // 0.500%
+    case 3:
+      return 0.007;   // 0.700%
+    default:
+      return 0.004;
+  }
+}
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context)
